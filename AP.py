@@ -3,7 +3,7 @@ import imaplib
 import email
 from datetime import datetime, timedelta
 
-def download_attachments(username, password, target_email, start_date):
+def download_attachments(username, password, target_email, start_date, attachment_format):
     # Convert start_date to datetime object
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
 
@@ -66,27 +66,29 @@ start_date = st.text_input("Enter the start date (YYYY-MM-DD):")
 
 # Check if the user has provided all necessary inputs
 if email_address and password and target_email and start_date:
-    # Display extracted filenames
-    extracted_filenames = download_attachments(email_address, password, target_email, start_date)
-    
-    st.write("Extracted Filenames:")
-    for filename in extracted_filenames:
-        st.write(filename)
-
-    # Dropdown for selecting attachment format
-    attachment_format = st.selectbox("Select the attachment format:", ["image", "pdf", "word", "excel"])
-
     # Download attachments when the user clicks the button
-    if st.button("Download Selected Format"):
-        selected_format_filenames = [filename for filename in extracted_filenames if attachment_format.lower() in filename.lower()]
+    if st.button("Perform Extraction"):
+        # Display extracted filenames
+        extracted_filenames = download_attachments(email_address, password, target_email, start_date, "")
+        
+        st.write("Extracted Filenames:")
+        for filename in extracted_filenames:
+            st.write(filename)
 
-        if selected_format_filenames:
-            st.write("Downloading Selected Format:")
-            for filename in selected_format_filenames:
-                st.write(filename)
-                # Perform the download operation here
-            st.success("Attachments downloaded successfully!")
-        else:
-            st.warning(f"No attachments found in the selected format: {attachment_format}")
+        # Dropdown for selecting attachment format
+        attachment_format = st.selectbox("Select the attachment format:", ["image", "pdf", "word", "excel"])
+
+        # Download attachments when the user clicks the button
+        if st.button("Download Selected Format"):
+            selected_format_filenames = [filename for filename in extracted_filenames if attachment_format.lower() in filename.lower()]
+
+            if selected_format_filenames:
+                st.write("Downloading Selected Format:")
+                for filename in selected_format_filenames:
+                    st.write(filename)
+                    # Perform the download operation here
+                st.success("Attachments downloaded successfully!")
+            else:
+                st.warning(f"No attachments found in the selected format: {attachment_format}")
 else:
     st.warning("Please fill in all the required fields.")
