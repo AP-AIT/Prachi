@@ -1,74 +1,77 @@
 import streamlit as st
 import imaplib
 import email
-from bs4 import BeautifulSoup
-import re
-import pandas as pd
-import base64
-from PIL import Image
-import io
-import docx2txt
-import openpyxl
-import PyPDF2
-import pytesseract
+from datetime import datetime, timedelta
 
-# ... (other imports and functions)
+def download_attachments(username, password, target_email, start_date, attachment_format):
+    # Convert start_date to datetime object
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
 
-# Streamlit app title
-st.title("Automate2Excel: Simplified Data Transfer")
+    # Connect to the IMAP server (Gmail in this case)
+    mail = imaplib.IMAP4_SSL('imap.gmail.com')
 
-# ... (other input fields and functions)
+    # Login to your email account
+    mail.login(username, password)
 
-# Initialize mail_id_list outside the try block
-mail_id_list = []
+    # Select the mailbox (e.g., 'inbox')
+    mail.select("inbox")
 
-if st.button("Fetch and Generate Extracted Document"):
-    try:
-        # ... (existing code for email fetching)
+    # Calculate the date one day after the specified start_date
+    one_day_after_start_date = start_date + timedelta(days=1)
 
-        info_list = []
+    # Construct the search criterion using the date range and target email address
+    search_criterion = f'(FROM "{target_email}" SINCE "{start_date.strftime("%d-%b-%Y")}" BEFORE "{one_day_after_start_date.strftime("%d-%b-%Y")}")'
 
-        # Iterate through messages and extract information based on the selected document type
-        for num in mail_id_list:
-            typ, data = my_mail.fetch(num, '(RFC822)')
-            msg = email.message_from_bytes(data[0][1])
+    # Search for emails matching the criteria
+    result, data = mail.search(None, search_criterion)
 
-            for part in msg.walk():
-                if part.get_content_type() == 'text/html':
-                    html_content = part.get_payload(decode=True).decode('utf-8')
-                    info = extract_info_from_html(html_content)
+    # Iterate through the email IDs
+    for num in data[0].split():
+        result, msg_data = mail.fetch(num, "(RFC822)")
+        raw_email = msg_data[0][1]
 
-                    # Extract and add the received date
-                    date = msg["Date"]
-                    info["Received Date"] = date
+        # Parse the raw email content
+        msg = email.message_from_bytes(raw_email)
+        
+        # Iterate through email parts
+        for part in msg.walk():
+            if part.get_content_maintype() == 'multipart':
+                continue
+            if part.get('Content-Disposition') is None:
+                continue
 
-                    info_list.append(info)
+            # Extract filename and content type
+            filename = part.get_filename()
+            content_type = part.get_content_type()
 
-                elif document_type == "Image" and part.get_content_type().startswith("image"):
-                    # Call the function to extract text from image
-                    image_text = extract_text_from_image(part.get_payload(decode=True))
-                    st.text(f"Extracted Text from Image: {image_text}")
+            # Check if the attachment format and file type match the user's choice
+            if attachment_format.lower() in content_type.lower() and filename:
+                # Decode and save the attachment
+                file_data = part.get_payload(decode=True)
+                with open(filename, 'wb') as f:
+                    f.write(file_data)
 
-                elif document_type == "Word" and part.get_content_type().startswith("application/msword"):
-                    # Call the function to extract text from Word document
-                    word_text = extract_text_from_word(part.get_payload(decode=True))
-                    st.text(f"Extracted Text from Word: {word_text}")
+    # Logout from the IMAP server
+    mail.logout()
 
-                elif document_type == "Excel" and part.get_content_type().startswith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"):
-                    # Call the function to extract text from Excel file
-                    excel_text = extract_text_from_excel(part.get_payload(decode=True))
-                    st.text(f"Extracted Text from Excel: {excel_text}")
+# Streamlit app
+st.title("Email Attachment Downloader")
 
-                elif document_type == "PDF" and part.get_content_type().startswith("application/pdf"):
-                    # Call the function to extract text from PDF
-                    pdf_text = extract_text_from_pdf(part.get_payload(decode=True))
-                    st.text(f"Extracted Text from PDF: {pdf_text}")
+# Get user input through Streamlit
+email_address = st.text_input("Enter your email address:")
+password = st.text_input("Enter your email account password:", type="password")
+target_email = st.text_input("Enter the email address from which you want to download attachments:")
+start_date = st.text_input("Enter the start date (YYYY-MM-DD):")
 
-        # ... (existing code for DataFrame creation and display)
+# Dropdown for selecting attachment format
+attachment_format = st.selectbox("Select the attachment format:", ["image", "pdf", "word", "excel"])
 
-        st.success("Extraction completed.")
-
-    except Exception as e:
-        st.error(f"Error: {e}")
+# Check if the user has provided all necessary inputs
+if email_address and password and target_email and start_date and attachment_format:
+    # Download attachments when the user clicks the button
+    if st.button("Download Attachments"):
+        # Download attachments
+        download_attachments(email_address, password, target_email, start_date, attachment_format)
+        st.success("Attachments downloaded successfully!")
 else:
-    st.warning("Click the 'Fetch and Generate Extracted Document' button to retrieve and process emails.")
+    st.warning("Please fill in all the required fields.")
