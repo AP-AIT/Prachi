@@ -1,6 +1,7 @@
 import streamlit as st
 import imaplib
 import email
+!pip install -r requirements.txt
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
