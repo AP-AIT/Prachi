@@ -35,23 +35,28 @@ def extract_info_from_html(html_content):
 
     name_element = soup.find(string=re.compile(r'Name', re.IGNORECASE))
     if name_element:
-        info["Name"] = name_element.find_next('td').get_text().strip()
+        next_td = name_element.find_next('td')
+        info["Name"] = next_td.get_text().strip() if next_td else None
 
     email_element = soup.find(string=re.compile(r'Email', re.IGNORECASE))
     if email_element:
-        info["Email"] = email_element.find_next('td').get_text().strip()
+        next_td = email_element.find_next('td')
+        info["Email"] = next_td.get_text().strip() if next_td else None
 
     workshop_element = soup.find(string=re.compile(r'Workshop Detail', re.IGNORECASE))
     if workshop_element:
-        info["Workshop Detail"] = workshop_element.find_next('td').get_text().strip()
+        next_td = workshop_element.find_next('td')
+        info["Workshop Detail"] = next_td.get_text().strip() if next_td else None
 
     date_element = soup.find(string=re.compile(r'Date', re.IGNORECASE))
     if date_element:
-        info["Date"] = date_element.find_next('td').get_text().strip()
+        next_td = date_element.find_next('td')
+        info["Date"] = next_td.get_text().strip() if next_td else None
 
     mobile_element = soup.find(string=re.compile(r'Mobile No\.', re.IGNORECASE))
     if mobile_element:
-        info["Mobile No."] = mobile_element.find_next('td').get_text().strip()
+        next_td = mobile_element.find_next('td')
+        info["Mobile No."] = next_td.get_text().strip() if next_td else None
 
     return info
 
