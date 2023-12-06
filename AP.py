@@ -4,6 +4,16 @@ import email
 from datetime import datetime, timedelta
 import io
 from PIL import Image
+import pytesseract
+
+def extract_text_from_images(image_data):
+    extracted_text = []
+    for image_bytes in image_data:
+        # Use pytesseract to extract text from image
+        image = Image.open(io.BytesIO(image_bytes))
+        text = pytesseract.image_to_string(image)
+        extracted_text.append(text.strip())
+    return extracted_text
 
 def display_images(username, password, target_email, start_date):
     # Convert start_date to datetime object
@@ -50,24 +60,35 @@ def display_images(username, password, target_email, start_date):
     return image_data
 
 # Streamlit app
-st.title("Image Viewer")
+st.title("Image Text Extractor")
 
 # Get user input through Streamlit
 email_address = st.text_input("Enter your email address:")
 password = st.text_input("Enter your email account password:", type="password")
-target_email = st.text_input("Enter the email address from which you want to view images:")
+target_email = st.text_input("Enter the email address from which you want to extract text from images:")
 start_date = st.text_input("Enter the start date (YYYY-MM-DD):")
 
 # Check if the user has provided all necessary inputs
 if email_address and password and target_email and start_date:
-    # Display images when the user clicks the button
-    if st.button("View Images"):
+    # Extract text from images when the user clicks the button
+    if st.button("Extract Text from Images"):
         # Display extracted images
         image_data = display_images(email_address, password, target_email, start_date)
         
-        for image_bytes in image_data:
-            # Display image using PIL
-            image = Image.open(io.BytesIO(image_bytes))
-            st.image(image, caption='Image', use_column_width=True)
+        # Extract text from images
+        extracted_text = extract_text_from_images(image_data)
+        
+        # Display extracted text
+        st.write("Extracted Text from Images:")
+        for text in extracted_text:
+            st.write(text)
+
+        # Download text when the user clicks the button
+        if st.button("Download Text"):
+            text_filename = "extracted_text.txt"
+            with open(text_filename, 'w') as file:
+                for text in extracted_text:
+                    file.write(text + "\n")
+            st.success(f"Text downloaded successfully. Filename: {text_filename}")
 else:
     st.warning("Please fill in all the required fields.")
