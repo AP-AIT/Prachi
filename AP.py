@@ -6,6 +6,9 @@ import io
 from PIL import Image
 import pytesseract
 
+# Specify the path to the Tesseract executable
+pytesseract.pytesseract.tesseract_cmd = 'C:\Program Files\Tesseract-OCR'  # Replace with the actual path
+
 def extract_text_from_images(image_data):
     extracted_text = []
     for image_bytes in image_data:
