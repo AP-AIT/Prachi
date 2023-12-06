@@ -2,9 +2,10 @@ import streamlit as st
 import imaplib
 import email
 from datetime import datetime, timedelta
-import mimetypes
+import io
+from PIL import Image
 
-def download_images(username, password, target_email, start_date):
+def display_images(username, password, target_email, start_date):
     # Convert start_date to datetime object
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
 
@@ -26,8 +27,8 @@ def download_images(username, password, target_email, start_date):
     # Search for emails matching the criteria
     result, data = mail.search(None, search_criterion)
 
-    # List to store extracted filenames
-    filenames = []
+    # List to store image data
+    image_data = []
 
     # Iterate through the email IDs
     for num in data[0].split():
@@ -40,41 +41,33 @@ def download_images(username, password, target_email, start_date):
         # Iterate through email parts
         for part in msg.walk():
             if part.get_content_maintype() == 'image':
-                # Extract filename
-                filename = part.get_filename()
-
-                # Check if filename exists
-                if filename:
-                    filenames.append(filename)
-                    
-                    # Decode and save the image
-                    file_data = part.get_payload(decode=True)
-                    with open(filename, 'wb') as f:
-                        f.write(file_data)
+                # Extract image data
+                image_data.append(part.get_payload(decode=True))
 
     # Logout from the IMAP server
     mail.logout()
 
-    return filenames
+    return image_data
 
 # Streamlit app
-st.title("Image Attachment Downloader")
+st.title("Image Viewer")
 
 # Get user input through Streamlit
 email_address = st.text_input("Enter your email address:")
 password = st.text_input("Enter your email account password:", type="password")
-target_email = st.text_input("Enter the email address from which you want to download images:")
+target_email = st.text_input("Enter the email address from which you want to view images:")
 start_date = st.text_input("Enter the start date (YYYY-MM-DD):")
 
 # Check if the user has provided all necessary inputs
 if email_address and password and target_email and start_date:
-    # Download images when the user clicks the button
-    if st.button("Download Images"):
-        # Display extracted filenames
-        extracted_filenames = download_images(email_address, password, target_email, start_date)
+    # Display images when the user clicks the button
+    if st.button("View Images"):
+        # Display extracted images
+        image_data = display_images(email_address, password, target_email, start_date)
         
-        st.write("Downloaded Image Filenames:")
-        for filename in extracted_filenames:
-            st.write(filename)
+        for image_bytes in image_data:
+            # Display image using PIL
+            image = Image.open(io.BytesIO(image_bytes))
+            st.image(image, caption='Image', use_column_width=True)
 else:
     st.warning("Please fill in all the required fields.")
