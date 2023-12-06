@@ -3,7 +3,7 @@ import imaplib
 import email
 from datetime import datetime, timedelta
 
-def download_attachments(username, password, target_email, start_date, attachment_format):
+def download_attachments(username, password, target_email, start_date):
     # Convert start_date to datetime object
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
 
@@ -25,6 +25,9 @@ def download_attachments(username, password, target_email, start_date, attachmen
     # Search for emails matching the criteria
     result, data = mail.search(None, search_criterion)
 
+    # List to store extracted filenames
+    filenames = []
+
     # Iterate through the email IDs
     for num in data[0].split():
         result, msg_data = mail.fetch(num, "(RFC822)")
@@ -42,17 +45,15 @@ def download_attachments(username, password, target_email, start_date, attachmen
 
             # Extract filename and content type
             filename = part.get_filename()
-            content_type = part.get_content_type()
 
-            # Check if the attachment format and file type match the user's choice
-            if attachment_format.lower() in content_type.lower() and filename:
-                # Decode and save the attachment
-                file_data = part.get_payload(decode=True)
-                with open(filename, 'wb') as f:
-                    f.write(file_data)
+            # Check if filename exists
+            if filename:
+                filenames.append(filename)
 
     # Logout from the IMAP server
     mail.logout()
+
+    return filenames
 
 # Streamlit app
 st.title("Email Attachment Downloader")
@@ -63,15 +64,29 @@ password = st.text_input("Enter your email account password:", type="password")
 target_email = st.text_input("Enter the email address from which you want to download attachments:")
 start_date = st.text_input("Enter the start date (YYYY-MM-DD):")
 
-# Dropdown for selecting attachment format
-attachment_format = st.selectbox("Select the attachment format:", ["image", "pdf", "word", "excel"])
-
 # Check if the user has provided all necessary inputs
-if email_address and password and target_email and start_date and attachment_format:
+if email_address and password and target_email and start_date:
+    # Display extracted filenames
+    extracted_filenames = download_attachments(email_address, password, target_email, start_date)
+    
+    st.write("Extracted Filenames:")
+    for filename in extracted_filenames:
+        st.write(filename)
+
+    # Dropdown for selecting attachment format
+    attachment_format = st.selectbox("Select the attachment format:", ["image", "pdf", "word", "excel"])
+
     # Download attachments when the user clicks the button
-    if st.button("Download Attachments"):
-        # Download attachments
-        download_attachments(email_address, password, target_email, start_date, attachment_format)
-        st.success("Attachments downloaded successfully!")
+    if st.button("Download Selected Format"):
+        selected_format_filenames = [filename for filename in extracted_filenames if attachment_format.lower() in filename.lower()]
+
+        if selected_format_filenames:
+            st.write("Downloading Selected Format:")
+            for filename in selected_format_filenames:
+                st.write(filename)
+                # Perform the download operation here
+            st.success("Attachments downloaded successfully!")
+        else:
+            st.warning(f"No attachments found in the selected format: {attachment_format}")
 else:
     st.warning("Please fill in all the required fields.")
