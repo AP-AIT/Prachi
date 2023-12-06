@@ -21,6 +21,12 @@ password = st.text_input("Enter your email password", type="password")
 # Create input field for the email address to search for
 search_email = st.text_input("Enter the email address to search for")
 
+# Create dropdown for document type
+document_type = st.selectbox("Select the type of document", ["HTML", "Image", "Word", "Excel", "PDF"])
+
+# Create date picker for selecting the date
+selected_date = st.date_input("Select the date of the mail")
+
 # Function to extract information from HTML content
 def extract_info_from_html(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -91,7 +97,7 @@ def extract_text_from_pdf(pdf_bytes):
 # Initialize mail_id_list outside the try block
 mail_id_list = []
 
-if st.button("Fetch and Generate Excel"):
+if st.button("Fetch and Generate Extracted Document"):
     try:
         # URL for IMAP connection
         imap_url = 'imap.gmail.com'
@@ -114,7 +120,7 @@ if st.button("Fetch and Generate Excel"):
 
         info_list = []
 
-        # Iterate through messages and extract information from HTML content
+        # Iterate through messages and extract information based on the selected document type
         for num in mail_id_list:
             typ, data = my_mail.fetch(num, '(RFC822)')
             msg = email.message_from_bytes(data[0][1])
@@ -130,28 +136,35 @@ if st.button("Fetch and Generate Excel"):
 
                     info_list.append(info)
 
-                # ... (existing code for other attachment types)
+                elif document_type == "Image" and part.get_content_type().startswith("image"):
+                    # Call the function to extract text from image
+                    image_text = extract_text_from_image(part.get_payload(decode=True))
+                    st.text(f"Extracted Text from Image: {image_text}")
 
-        # Create a DataFrame from the info_list
-        df = pd.DataFrame(info_list)
+                elif document_type == "Word" and part.get_content_type().startswith("application/msword"):
+                    # Call the function to extract text from Word document
+                    word_text = extract_text_from_word(part.get_payload(decode=True))
+                    st.text(f"Extracted Text from Word: {word_text}")
 
-        # Generate the Excel file
-        st.write("Data extracted from emails:")
-        st.write(df)
+                elif document_type == "Excel" and part.get_content_type().startswith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"):
+                    # Call the function to extract text from Excel file
+                    excel_text = extract_text_from_excel(part.get_payload(decode=True))
+                    st.text(f"Extracted Text from Excel: {excel_text}")
 
-        if st.button("Download Excel File"):
-            excel_file = df.to_excel('EXPO_leads.xlsx', index=False, engine='openpyxl')
-            if excel_file:
-                with open('EXPO_leads.xlsx', 'rb') as file:
-                    st.download_button(
-                        label="Click to download Excel file",
-                        data=file,
-                        key='download-excel'
-                    )
+                elif document_type == "PDF" and part.get_content_type().startswith("application/pdf"):
+                    # Call the function to extract text from PDF
+                    pdf_text = extract_text_from_pdf(part.get_payload(decode=True))
+                    st.text(f"Extracted Text from PDF: {pdf_text}")
 
-        st.success("Excel file has been generated and is ready for download.")
+        # If the selected document type is HTML, create a DataFrame from the info_list
+        if document_type == "HTML":
+            df = pd.DataFrame(info_list)
+            st.write("Data extracted from emails:")
+            st.write(df)
+
+        st.success("Extraction completed.")
 
     except Exception as e:
         st.error(f"Error: {e}")
 else:
-    st.warning("Click the 'Fetch and Generate Excel' button to retrieve and process emails.")
+    st.warning("Click the 'Fetch and Generate Extracted Document' button to retrieve and process emails.")
