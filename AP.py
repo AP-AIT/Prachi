@@ -23,7 +23,7 @@ def display_images(username, password, target_email, start_date):
         one_day_after_start_date = start_date + timedelta(days=1)
 
         # Construct the search criterion using the date range and target email address
-        search_criterion = f'(FROM "{target_email}" SENTSINCE "{start_date} 00:00:00" BEFORE "{one_day_after_start_date} 00:00:00")'
+        search_criterion = f'(FROM "{target_email}" SENTSINCE "{start_date.strftime("%d-%b-%Y")} 00:00:00" BEFORE "{one_day_after_start_date.strftime("%d-%b-%Y")} 00:00:00")'
 
         # Search for emails matching the criteria
         result, data = mail.search(None, search_criterion)
