@@ -19,21 +19,19 @@ def display_images(username, password, target_email, start_date):
         # Select the mailbox (e.g., 'inbox')
         mail.select("inbox")
 
-        # Calculate the date one day after the specified start_date
-        one_day_after_start_date = start_date + timedelta(days=1)
-
         # Construct the search criterion using the date range and target email address
-        search_criterion = f'(FROM "{target_email}" SENTSINCE "{start_date.strftime("%d-%b-%Y")} 00:00:00" BEFORE "{one_day_after_start_date.strftime("%d-%b-%Y")} 00:00:00")'
+        search_criterion = f'(FROM "{target_email}" SINCE "{start_date.strftime("%d-%b-%Y")}" BEFORE "{(start_date + timedelta(days=1)).strftime("%d-%b-%Y")}")'
 
         # Search for emails matching the criteria
-        result, data = mail.search(None, search_criterion)
+        result, data = mail.uid('search', None, search_criterion)
+        email_ids = data[0].split()
 
         # List to store image data
         image_data = []
 
         # Iterate through the email IDs
-        for num in data[0].split():
-            result, msg_data = mail.fetch(num, "(RFC822)")
+        for email_id in email_ids:
+            result, msg_data = mail.uid('fetch', email_id, "(RFC822)")
             raw_email = msg_data[0][1]
 
             # Parse the raw email content
