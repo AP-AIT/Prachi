@@ -1,3 +1,4 @@
+# Import necessary libraries
 import streamlit as st
 import imaplib
 import email
