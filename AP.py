@@ -4,7 +4,7 @@ import imaplib
 import email
 from datetime import datetime, timedelta
 import io
-from PyMuPDF import PyMuPDF
+import fitz  # PyMuPDF's fitz module for PDF extraction
 
 def display_pdfs(username, password, target_email, start_date):
     try:
@@ -41,7 +41,7 @@ def display_pdfs(username, password, target_email, start_date):
             # Iterate through email parts
             for part in msg.walk():
                 if part.get_content_type() == 'application/pdf':
-                    # Extract PDF data
+                    # Extract PDF data using PyMuPDF's fitz
                     pdf_data.append(part.get_payload(decode=True))
     except Exception as e:
         st.error(f"An error occurred: {e}")
@@ -71,11 +71,12 @@ if email_address and password and target_email and start_date:
             st.warning("No PDFs found.")
 
         for idx, pdf_bytes in enumerate(pdf_data, start=1):
-            # Display PDF content using PyMuPDF
-            pdf_doc = PyMuPDF.PdfDocument(io.BytesIO(pdf_bytes))
+            # Display PDF content using PyMuPDF's fitz
             pdf_text = ""
-            for page_num in range(len(pdf_doc)):
-                pdf_text += pdf_doc[page_num].getText()
+            with fitz.open(io.BytesIO(pdf_bytes)) as pdf_doc:
+                for page_num in range(pdf_doc.page_count):
+                    page = pdf_doc.load_page(page_num)
+                    pdf_text += page.get_text()
 
             st.text_area(label=f'PDF {idx} Content', value=pdf_text, height=400)
 else:
