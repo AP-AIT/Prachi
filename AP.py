@@ -3,7 +3,6 @@ import imaplib
 import email
 from datetime import datetime, timedelta
 import io
-from PIL import Image
 from pdf2image import convert_from_bytes
 
 def display_pdfs(username, password, target_email, start_date):
@@ -27,7 +26,7 @@ def display_pdfs(username, password, target_email, start_date):
         result, data = mail.uid('search', None, search_criterion)
         email_ids = data[0].split()
 
-        # List to store image data
+        # List to store PDF data
         pdf_data = []
 
         # Iterate through the email IDs
@@ -74,8 +73,8 @@ if email_address and password and target_email and start_date:
             # Convert PDF to images using pdf2image
             images = convert_from_bytes(pdf_bytes)
 
-            for image in images:
+            for page_num, image in enumerate(images, start=1):
                 # Display image using PIL
-                st.image(image, caption=f'Image from PDF {idx}', use_column_width=True)
+                st.image(image, caption=f'Page {page_num} from PDF {idx}', use_column_width=True)
 else:
     st.warning("Please fill in all the required fields.")
