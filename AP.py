@@ -3,7 +3,7 @@ import imaplib
 import email
 from datetime import datetime, timedelta
 import io
-import PyPDF2
+import fitz  # PyMuPDF
 
 def extract_pdfs(username, password, target_email, start_date):
     try:
@@ -22,8 +22,12 @@ def extract_pdfs(username, password, target_email, start_date):
             for part in msg.walk():
                 if part.get_content_maintype() == 'application' and part.get_content_subtype() == 'pdf':
                     pdf_data.append(part.get_payload(decode=True))
+    except imaplib.IMAP4_SSL.error as e:
+        st.error(f"IMAP error occurred: {e}")
+    except email.errors.MessageError as e:
+        st.error(f"Message error occurred: {e}")
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"An unexpected error occurred: {e}")
     finally:
         mail.logout()
     return pdf_data
@@ -38,11 +42,13 @@ start_date = st.text_input("Enter the start date (YYYY-MM-DD):")
 
 if email_address and password and target_email and start_date:
     if st.button("Extract PDFs"):
+        st.info("Extracting PDFs. Please wait...")
         pdf_data = extract_pdfs(email_address, password, target_email, start_date)
         if not pdf_data:
             st.warning("No PDFs found.")
         for idx, pdf_bytes in enumerate(pdf_data, start=1):
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
-            st.write(f'PDF {idx} - Number of pages: {len(pdf_reader.pages)}')
+            pdf_document = fitz.open(stream=io.BytesIO(pdf_bytes), filetype="pdf")
+            st.write(f'PDF {idx} - Number of pages: {pdf_document.page_count}')
+        st.success("Extraction complete!")
 else:
     st.warning("Please fill in all the required fields.")
