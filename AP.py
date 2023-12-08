@@ -3,75 +3,46 @@ import imaplib
 import email
 from datetime import datetime, timedelta
 import io
-from PIL import Image
+import PyPDF2
 
-def display_images(username, password, target_email, start_date):
+def extract_pdfs(username, password, target_email, start_date):
     try:
-        # Convert start_date to datetime object
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
-
-        # Connect to the IMAP server (Gmail in this case)
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
-
-        # Login to your email account
         mail.login(username, password)
-
-        # Select the mailbox (e.g., 'inbox')
         mail.select("inbox")
-
-        # Construct the search criterion using the date range and target email address
         search_criterion = f'(FROM "{target_email}" SINCE "{start_date.strftime("%d-%b-%Y")}" BEFORE "{(start_date + timedelta(days=1)).strftime("%d-%b-%Y")}")'
-
-        # Search for emails matching the criteria
         result, data = mail.uid('search', None, search_criterion)
         email_ids = data[0].split()
-
-        # List to store image data
-        image_data = []
-
-        # Iterate through the email IDs
+        pdf_data = []
         for email_id in email_ids:
             result, msg_data = mail.uid('fetch', email_id, "(RFC822)")
             raw_email = msg_data[0][1]
-
-            # Parse the raw email content
             msg = email.message_from_bytes(raw_email)
-
-            # Iterate through email parts
             for part in msg.walk():
-                if part.get_content_maintype() == 'image':
-                    # Extract image data
-                    image_data.append(part.get_payload(decode=True))
+                if part.get_content_maintype() == 'application' and part.get_content_subtype() == 'pdf':
+                    pdf_data.append(part.get_payload(decode=True))
     except Exception as e:
         st.error(f"An error occurred: {e}")
     finally:
-        # Logout from the IMAP server (even if an error occurs)
         mail.logout()
-
-    return image_data
+    return pdf_data
 
 # Streamlit app
-st.title("Image Viewer")
+st.title("PDF Extractor")
 
-# Get user input through Streamlit
 email_address = st.text_input("Enter your email address:")
 password = st.text_input("Enter your email account password:", type="password")
-target_email = st.text_input("Enter the email address from which you want to view images:")
+target_email = st.text_input("Enter the email address from which you want to extract PDFs:")
 start_date = st.text_input("Enter the start date (YYYY-MM-DD):")
 
-# Check if the user has provided all necessary inputs
 if email_address and password and target_email and start_date:
-    # Display images when the user clicks the button
-    if st.button("View Images"):
-        # Display extracted images
-        image_data = display_images(email_address, password, target_email, start_date)
-
-        if not image_data:
-            st.warning("No images found.")
-
-        for idx, image_bytes in enumerate(image_data, start=1):
-            # Display image using PIL
-            image = Image.open(io.BytesIO(image_bytes))
-            st.image(image, caption=f'Image {idx}', use_column_width=True)
+    if st.button("Extract PDFs"):
+        pdf_data = extract_pdfs(email_address, password, target_email, start_date)
+        if not pdf_data:
+            st.warning("No PDFs found.")
+        for idx, pdf_bytes in enumerate(pdf_data, start=1):
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+            st.write(f'PDF {idx} - Number of pages: {len(pdf_reader.pages)}')
 else:
     st.warning("Please fill in all the required fields.")
