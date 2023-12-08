@@ -1,10 +1,10 @@
-# Import necessary libraries
 import streamlit as st
 import imaplib
 import email
 from datetime import datetime, timedelta
 import io
-import fitz  # PyMuPDF's fitz module for PDF extraction
+from PIL import Image
+from pdf2image import convert_from_bytes
 
 def display_pdfs(username, password, target_email, start_date):
     try:
@@ -27,7 +27,7 @@ def display_pdfs(username, password, target_email, start_date):
         result, data = mail.uid('search', None, search_criterion)
         email_ids = data[0].split()
 
-        # List to store PDF data
+        # List to store image data
         pdf_data = []
 
         # Iterate through the email IDs
@@ -41,7 +41,7 @@ def display_pdfs(username, password, target_email, start_date):
             # Iterate through email parts
             for part in msg.walk():
                 if part.get_content_type() == 'application/pdf':
-                    # Extract PDF data using PyMuPDF's fitz
+                    # Extract PDF data
                     pdf_data.append(part.get_payload(decode=True))
     except Exception as e:
         st.error(f"An error occurred: {e}")
@@ -71,13 +71,11 @@ if email_address and password and target_email and start_date:
             st.warning("No PDFs found.")
 
         for idx, pdf_bytes in enumerate(pdf_data, start=1):
-            # Display PDF content using PyMuPDF's fitz
-            pdf_text = ""
-            with fitz.open(io.BytesIO(pdf_bytes)) as pdf_doc:
-                for page_num in range(pdf_doc.page_count):
-                    page = pdf_doc.load_page(page_num)
-                    pdf_text += page.get_text()
+            # Convert PDF to images using pdf2image
+            images = convert_from_bytes(pdf_bytes)
 
-            st.text_area(label=f'PDF {idx} Content', value=pdf_text, height=400)
+            for image in images:
+                # Display image using PIL
+                st.image(image, caption=f'Image from PDF {idx}', use_column_width=True)
 else:
     st.warning("Please fill in all the required fields.")
